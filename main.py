@@ -57,6 +57,7 @@ class PipelineConfig:
     track_alpha_pos: float
     track_alpha_uncertainty: float
     enemy_after_updates: int
+    flush_age_ms: float
 
 
 class ObservationSource:
@@ -222,6 +223,7 @@ def run_pipeline_live(
     associator = ObservationAssociator(
         max_dt_ms=cfg.assoc_window_ms,
         min_score=cfg.assoc_score_thresh,
+        flush_age_ms=cfg.assoc_flush_age_ms,
     )
     geolocator = TDoAGeolocator(cfg.receivers_json, cfg.path_loss_json)
     tm = TrackManager(
@@ -301,8 +303,9 @@ def main() -> None:
 
     # Inference / association
     ap.add_argument("--ood-thresh", type=float, default=0.70)
-    ap.add_argument("--assoc-window-ms", type=float, default=100.0)
+    ap.add_argument("--assoc-window-ms", type=float, default=1.0)
     ap.add_argument("--assoc-score-thresh", type=float, default=0.55)
+    ap.add_argument("--assoc-flush-age-ms", type=float, default=2.0)
 
     # Track policy
     ap.add_argument("--enemy-after-updates", type=int, default=3)
@@ -380,6 +383,7 @@ def main() -> None:
         track_alpha_pos=args.alpha_pos,
         track_alpha_uncertainty=args.alpha_uncertainty,
         enemy_after_updates=args.enemy_after_updates,
+        flush_age_ms=args.assoc_flush_age_ms,
     )
 
     if args.source == "stdin":
