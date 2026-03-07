@@ -1,0 +1,25 @@
+{
+  "receivers": [
+    {
+      "receiver_id": "rx1",
+      "latitude": 49.2827,
+      "longitude": -123.1207,
+      "sensitivity_dbm": -110,
+      "timing_accuracy_ns": 100
+    },
+    {
+      "receiver_id": "rx2",
+      "latitude": 49.2850,
+      "longitude": -123.1000,
+      "sensitivity_dbm": -110,
+      "timing_accuracy_ns": 100
+    },
+    {
+      "receiver_id": "rx3",
+      "latitude": 49.2700,
+      "longitude": -123.1100,
+      "sensitivity_dbm": -110,
+      "timing_accuracy_ns": 100
+    }
+  ]
+}

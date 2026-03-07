@@ -1,0 +1,36 @@
+{
+  "labels": [
+    {
+      "label_id": 0,
+      "modulation": "FMCW",
+      "signal_name": "Radar-Altimeter"
+    },
+    {
+      "label_id": 1,
+      "modulation": "BPSK",
+      "signal_name": "SATCOM"
+    },
+    {
+      "label_id": 2,
+      "modulation": "GFSK",
+      "signal_name": "Bluetooth"
+    },
+    {
+      "label_id": 3,
+      "modulation": "DSSS-OQPSK",
+      "signal_name": "IEEE802.15.4"
+    },
+    {
+      "label_id": 4,
+      "modulation": "DSSS-CCK",
+      "signal_name": "IEEE802.11bg"
+    },
+    {
+      "label_id": 5,
+      "modulation": "ASK",
+      "signal_name": "short-range"
+    }
+  ],
+  "num_samples": 300361,
+  "skipped_samples_not_in_label_map": 560000
+}

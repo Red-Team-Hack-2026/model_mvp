@@ -1,0 +1,6 @@
+{
+  "rssi_ref_dbm": -40.0,
+  "d_ref_m": 1.0,
+  "path_loss_exponent": 2.7,
+  "rssi_noise_std_db": 4.0
+}

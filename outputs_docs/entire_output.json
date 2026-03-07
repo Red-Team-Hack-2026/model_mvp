@@ -1,0 +1,178 @@
+{
+    "event": "track_created",
+    "track": {
+        "track_id": 1,
+        "created_at": "2026-03-06T08:20:02.905Z",
+        "updated_at": "2026-03-06T08:20:02.905Z",
+        "last_seen": "2026-03-06T08:20:02.905Z",
+        "age_s": 0.0,
+        "is_stale": false,
+        "latitude": 49.2741083839233,
+        "longitude": -123.11033745684995,
+        "uncertainty_radius_m": 1142.6518959999673,
+        "pred_label_id": 1,
+        "pred_label_name": "BPSK | SATCOM",
+        "ood_unknown": true,
+        "affiliation": "unknown",
+        "assurance_pct": 53.51487994194031,
+        "mean_confidence": 0.652351438999176,
+        "mean_nearest_centroid_cosine_sim": 0.5351487994194031,
+        "observation_ids": [
+            "obs_1",
+            "obs_2",
+            "obs_3"
+        ],
+        "num_updates": 1,
+        "history": [
+            {
+                "group_id": 1,
+                "timestamp": "2026-03-06T08:20:02.905Z",
+                "latitude": 49.2741083839233,
+                "longitude": -123.11033745684995,
+                "uncertainty_radius_m": 1142.6518959999673,
+                "pred_label_id": 1,
+                "pred_label_name": "BPSK | SATCOM",
+                "ood_unknown": true,
+                "affiliation": "unknown",
+                "assurance_pct": 53.51487994194031,
+                "mean_confidence": 0.652351438999176,
+                "mean_nearest_centroid_cosine_sim": 0.5351487994194031,
+                "observation_ids": [
+                    "obs_1",
+                    "obs_2",
+                    "obs_3"
+                ],
+                "num_observations": 3,
+                "receiver_ids": [
+                    "rx1",
+                    "rx2",
+                    "rx3"
+                ]
+            }
+        ]
+    },
+    "source_fix": {
+        "group_id": 1,
+        "geolocation_ok": true,
+        "pred_label_id": 1,
+        "pred_label_name": "BPSK | SATCOM",
+        "ood_unknown": true,
+        "affiliation": "unknown",
+        "assurance_pct": 53.51487994194031,
+        "mean_confidence": 0.652351438999176,
+        "mean_nearest_centroid_cosine_sim": 0.5351487994194031,
+        "observation_ids": [
+            "obs_1",
+            "obs_2",
+            "obs_3"
+        ],
+        "start_timestamp": "2026-03-06T08:20:02.865Z",
+        "end_timestamp": "2026-03-06T08:20:02.905Z",
+        "num_observations": 3,
+        "receiver_ids": [
+            "rx1",
+            "rx2",
+            "rx3"
+        ],
+        "latitude": 49.2741083839233,
+        "longitude": -123.11033745684995,
+        "uncertainty_radius_m": 1142.6518959999673,
+        "debug": {
+            "reference_origin": {
+                "latitude": 49.27923333333334,
+                "longitude": -123.11023333333333
+            },
+            "receivers": [
+                {
+                    "receiver_id": "rx1",
+                    "latitude": 49.2827,
+                    "longitude": -123.1207,
+                    "rssi_dbm": -64.0,
+                    "distance_estimate_m": 7.742636826811269
+                },
+                {
+                    "receiver_id": "rx2",
+                    "latitude": 49.285,
+                    "longitude": -123.1,
+                    "rssi_dbm": -68.0,
+                    "distance_estimate_m": 10.8902296226373
+                },
+                {
+                    "receiver_id": "rx3",
+                    "latitude": 49.27,
+                    "longitude": -123.11,
+                    "rssi_dbm": -72.0,
+                    "distance_estimate_m": 15.317404637020799
+                }
+            ],
+            "solver": {
+                "rmse_m": 1103.4277127880216,
+                "iterations_used": 50,
+                "weights": [
+                    1.0,
+                    0.7109709432312434,
+                    0.505479682119124
+                ],
+                "estimated_distances_m": [
+                    7.742636826811269,
+                    10.8902296226373,
+                    15.317404637020799
+                ]
+            }
+        }
+    }
+}
+{
+    "event": "track_final",
+    "track": {
+        "track_id": 1,
+        "created_at": "2026-03-06T08:20:02.905Z",
+        "updated_at": "2026-03-06T08:20:02.905Z",
+        "last_seen": "2026-03-06T08:20:02.905Z",
+        "age_s": 0.0,
+        "is_stale": false,
+        "latitude": 49.2741083839233,
+        "longitude": -123.11033745684995,
+        "uncertainty_radius_m": 1142.6518959999673,
+        "pred_label_id": 1,
+        "pred_label_name": "BPSK | SATCOM",
+        "ood_unknown": true,
+        "affiliation": "unknown",
+        "assurance_pct": 53.51487994194031,
+        "mean_confidence": 0.652351438999176,
+        "mean_nearest_centroid_cosine_sim": 0.5351487994194031,
+        "observation_ids": [
+            "obs_1",
+            "obs_2",
+            "obs_3"
+        ],
+        "num_updates": 1,
+        "history": [
+            {
+                "group_id": 1,
+                "timestamp": "2026-03-06T08:20:02.905Z",
+                "latitude": 49.2741083839233,
+                "longitude": -123.11033745684995,
+                "uncertainty_radius_m": 1142.6518959999673,
+                "pred_label_id": 1,
+                "pred_label_name": "BPSK | SATCOM",
+                "ood_unknown": true,
+                "affiliation": "unknown",
+                "assurance_pct": 53.51487994194031,
+                "mean_confidence": 0.652351438999176,
+                "mean_nearest_centroid_cosine_sim": 0.5351487994194031,
+                "observation_ids": [
+                    "obs_1",
+                    "obs_2",
+                    "obs_3"
+                ],
+                "num_observations": 3,
+                "receiver_ids": [
+                    "rx1",
+                    "rx2",
+                    "rx3"
+                ]
+            }
+        ]
+    }
+}

@@ -1,0 +1,24 @@
+python train.py \
+  --h5 RadComAWGN.hdf5 RadComDynamic.hdf5 RadComOta2.45GHz.hdf5 NewData.hdf5 \
+  --out runs/friendly_cnn_v2 \
+  --resume runs/friendly_cnn/best.pt \
+  --epochs 8 \
+  --lr-resume 5e-4
+
+
+# When the API arrives tomorrow
+
+# Basic usage:
+python main.py --source http --api-url "https://THEIR_ENDPOINT_HERE"
+
+# Write to stdout instead of output.jsonl
+python main.py --source http --api-url "https://THEIR_ENDPOINT_HERE" --out -
+
+# Add auth headers (Bearer token example):
+python main.py \
+  --source http \
+  --api-url "https://THEIR_ENDPOINT_HERE" \
+  --api-header "Authorization: Bearer YOUR_TOKEN"
+
+# Pool slower:
+python main.py --source http --api-url "https://THEIR_ENDPOINT_HERE" --poll-interval-s 1.0
