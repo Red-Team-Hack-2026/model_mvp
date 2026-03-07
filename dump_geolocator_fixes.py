@@ -23,7 +23,8 @@ from associator import ObservationAssociator
 from geolocate import RSSIGeolocator
 from live_pipeline import LiveInferenceEngine
 
-BATCH_URL = "https://findmyforce.online/submissions/batch"
+# BATCH_URL = "https://findmyforce.online/submissions/batch"
+BATCH_URL = "https://findmyforce.online/evaluate/submit"
 
 
 def submit_batch(rows: List[Dict[str, Any]], api_key: str, verify_ssl: bool = False) -> None:
@@ -38,12 +39,27 @@ def submit_batch(rows: List[Dict[str, Any]], api_key: str, verify_ssl: bool = Fa
     try:
         with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:  # type: ignore[attr-defined]
             result = json.loads(resp.read())
-        acc = result.get("accepted_count", 0)
-        rej = result.get("rejected_count", 0)
-        print(f"[BATCH] sent={len(rows)} accepted={acc} rejected={rej}", flush=True)
-        for r in result.get("results", []):
-            tag = "ACCEPTED" if r.get("accepted") else "REJECTED"
-            print(f"  [{tag}] obs={r.get('observation_id', '?')[:12]}... {r.get('message', '')}", flush=True)
+        # Evaluate endpoint returns scores directly
+        if "total_score" in result:
+            print(f"[EVAL] sent={len(rows)}", flush=True)
+            print(f"  total_score={result.get('total_score')}", flush=True)
+            print(f"  classification_score={result.get('classification_score')}", flush=True)
+            print(f"  geolocation_score={result.get('geolocation_score')}", flush=True)
+            print(f"  novelty_detection_score={result.get('novelty_detection_score')}", flush=True)
+            print(f"  correct_classifications={result.get('correct_classifications')}", flush=True)
+            print(f"  coverage={result.get('coverage')}%", flush=True)
+            print(f"  average_cep_meters={result.get('average_cep_meters')}", flush=True)
+            print(f"  attempt={result.get('attempt_number')} is_best={result.get('is_best')} best_total={result.get('best_total_score')}", flush=True)
+            for cls in result.get("per_class_scores", []):
+                print(f"    {cls['label']}: P={cls['precision']} R={cls['recall']} F1={cls['f1']} n={cls['count']}", flush=True)
+        else:
+            # Batch submissions endpoint
+            acc = result.get("accepted_count", 0)
+            rej = result.get("rejected_count", 0)
+            print(f"[BATCH] sent={len(rows)} accepted={acc} rejected={rej}", flush=True)
+            for r in result.get("results", []):
+                tag = "ACCEPTED" if r.get("accepted") else "REJECTED"
+                print(f"  [{tag}] obs={r.get('observation_id', '?')[:12]}... {r.get('message', '')}", flush=True)
     except Exception as e:
         print(f"[ERROR] batch of {len(rows)} failed: {e}", flush=True)
 
@@ -158,7 +174,7 @@ _LABEL_MAP = {
 _INVALID_LABELS = {"Bluetooth", "IEEE802.15.4", "IEEE802.11bg"}
 
 # Valid hostile labels the API accepts
-_HOSTILE_LABELS = {"Airbourne-detection", "Airbourne-range", "Air-Ground-MTI", "EW-Jammer"}
+_HOSTILE_LABELS = {"Airborne-detection", "Airborne-range", "Air-Ground-MTI", "EW-Jammer"}
 
 
 def _label_short(label: str) -> str:
