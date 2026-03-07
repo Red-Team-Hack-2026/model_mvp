@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import random
 import time
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 import h5py
@@ -189,19 +191,14 @@ def build_random_mode_observations(
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument(
-        "--mode", choices=["dataset", "dataset-two", "random"], default="dataset")
+    ap.add_argument("--mode", choices=["dataset", "dataset-two", "random"], default="dataset")
     ap.add_argument("--h5", help="Path to HDF5 dataset")
     ap.add_argument("--key", help="Single HDF5 key for dataset mode")
     ap.add_argument("--key2", help="Second HDF5 key for dataset-two mode")
-    ap.add_argument("--delay", type=float, default=0.0,
-                    help="Sleep between emitted observations")
-    ap.add_argument("--find", nargs="*",
-                    help="Search substrings for a key, e.g. bpsk Satcom -10")
-    ap.add_argument("--repeat", action="store_true",
-                    help="Repeat emitting observation bursts forever")
-    ap.add_argument("--repeat-delay", type=float, default=0.5,
-                    help="Sleep between repeated bursts")
+    ap.add_argument("--delay", type=float, default=0.0, help="Sleep between emitted observations")
+    ap.add_argument("--find", nargs="*", help="Search substrings for a key, e.g. bpsk Satcom -10")
+    ap.add_argument("--repeat", action="store_true", help="Repeat emitting observation bursts forever")
+    ap.add_argument("--repeat-delay", type=float, default=0.5, help="Sleep between repeated bursts")
     args = ap.parse_args()
 
     if args.mode in {"dataset", "dataset-two"} and not args.h5:
@@ -224,15 +221,12 @@ def main():
         if args.mode == "dataset":
             if not args.key:
                 raise SystemExit("--key is required for dataset mode")
-            observations = build_dataset_mode_observations(
-                args.h5, args.key, id_prefix=prefix)
+            observations = build_dataset_mode_observations(args.h5, args.key, id_prefix=prefix)
 
         elif args.mode == "dataset-two":
             if not args.key or not args.key2:
-                raise SystemExit(
-                    "--key and --key2 are required for dataset-two mode")
-            observations = build_two_emitter_dataset_mode(
-                args.h5, args.key, args.key2, id_prefix=prefix)
+                raise SystemExit("--key and --key2 are required for dataset-two mode")
+            observations = build_two_emitter_dataset_mode(args.h5, args.key, args.key2, id_prefix=prefix)
 
         else:
             observations = build_random_mode_observations(id_prefix=prefix)
@@ -249,4 +243,3 @@ def main():
 if __name__ == "__main__":
     import sys
     main()
-

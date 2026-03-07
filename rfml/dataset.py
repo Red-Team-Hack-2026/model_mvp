@@ -1,3 +1,4 @@
+# rfml/dataset.py (PATCH)
 import ast
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
@@ -113,8 +114,7 @@ FRIENDLY_CLASSES = [
     ("ASK", "short-range"),
 ]
 
-FRIENDLY_LABEL_MAP: Dict[Tuple[str, str], int] = {
-    pair: i for i, pair in enumerate(FRIENDLY_CLASSES)}
+FRIENDLY_LABEL_MAP: Dict[Tuple[str, str], int] = {pair: i for i, pair in enumerate(FRIENDLY_CLASSES)}
 
 
 def build_index(h5_paths: List[str], label_map: Optional[Dict[Tuple[str, str], int]] = None):
@@ -139,8 +139,7 @@ def build_index(h5_paths: List[str], label_map: Optional[Dict[Tuple[str, str], i
                     skipped += 1
                     continue
 
-                refs.append(SampleRef(path=p, key=k,
-                            label=label_map[pair], snr_db=snr))
+                refs.append(SampleRef(path=p, key=k, label=label_map[pair], snr_db=snr))
 
     meta = {
         "labels": [{"label_id": label_map[p], "modulation": p[0], "signal_name": p[1]} for p in FRIENDLY_CLASSES],
@@ -194,4 +193,3 @@ class H5IQDataset(Dataset):
             except Exception:
                 pass
         self._handles.clear()
-

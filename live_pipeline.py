@@ -1,3 +1,4 @@
+# live_pipeline.py
 from __future__ import annotations
 
 import json
@@ -29,13 +30,11 @@ def cosine(a: np.ndarray, b: np.ndarray) -> float:
 class LiveInferenceEngine:
     def __init__(self, ckpt_path: str, ood_thresh: float = 0.70, device: Optional[str] = None):
         self.ckpt_path = Path(ckpt_path)
-        self.device = device or (
-            "cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.ood_thresh = ood_thresh
 
         ckpt = torch.load(self.ckpt_path, map_location="cpu")
-        self.model = IQCNN(
-            num_classes=ckpt["num_classes"], emb_dim=ckpt["emb_dim"])
+        self.model = IQCNN(num_classes=ckpt["num_classes"], emb_dim=ckpt["emb_dim"])
         self.model.load_state_dict(ckpt["model"])
         self.model.eval().to(self.device)
 
@@ -134,4 +133,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
