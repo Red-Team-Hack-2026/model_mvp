@@ -83,12 +83,16 @@ class UnknownSignalLabeler:
         pulsed_kurtosis_thresh: float = 6.0,
         pulsed_peak_to_rms_thresh: float = 3.0,
         periodic_acf_peak_thresh: float = 0.35,
+        periodic_acf_peak_strong_thresh: float = 0.70,
+        range_peak_to_rms_strong_margin: float = 3.0,
     ):
         self.jammer_spectral_flatness_thresh = jammer_spectral_flatness_thresh
         self.jammer_occupied_bw_frac_thresh = jammer_occupied_bw_frac_thresh
         self.pulsed_kurtosis_thresh = pulsed_kurtosis_thresh
         self.pulsed_peak_to_rms_thresh = pulsed_peak_to_rms_thresh
         self.periodic_acf_peak_thresh = periodic_acf_peak_thresh
+        self.periodic_acf_peak_strong_thresh = periodic_acf_peak_strong_thresh
+        self.range_peak_to_rms_strong_margin = range_peak_to_rms_strong_margin
 
     def label_iq_snapshot(self, iq_snapshot: List[float]) -> Optional[UnknownLabelDecision]:
         z = _iq_to_complex(iq_snapshot)
@@ -117,19 +121,20 @@ class UnknownSignalLabeler:
 
         # 2) Pulsed radar family: envelope is spiky/impulsive
         if kurt >= self.pulsed_kurtosis_thresh or p2r >= self.pulsed_peak_to_rms_thresh:
-            # Use periodicity proxy to pick subtype
-            if acf_peak >= self.periodic_acf_peak_thresh:
+            # Be conservative on subtype splits.
+            # Default to Airborne-detection unless we have very strong evidence.
+            label_id = self.LABEL_ID_AIRBORNE_DETECTION
+            name = "Airborne-detection"
+
+            # Only call MTI if periodicity is *strong* (reduces false MTI).
+            if acf_peak >= self.periodic_acf_peak_strong_thresh:
                 label_id = self.LABEL_ID_AIR_GROUND_MTI
                 name = "Air-Ground-MTI"
             else:
-                # Default split: range-finding tends to be sparse (single strong pulse)
-                # If extremely peaky, call it range; otherwise airborne detection.
-                if p2r >= (self.pulsed_peak_to_rms_thresh + 1.5):
+                # Only call range if the envelope is extremely peaky (reduces false range).
+                if p2r >= (self.pulsed_peak_to_rms_thresh + self.range_peak_to_rms_strong_margin):
                     label_id = self.LABEL_ID_AIRBORNE_RANGE
                     name = "Airborne-range"
-                else:
-                    label_id = self.LABEL_ID_AIRBORNE_DETECTION
-                    name = "Airborne-detection"
 
             conf = float(min(0.95, 0.45 + 0.08 * max(0.0, kurt - self.pulsed_kurtosis_thresh) + 0.08 * max(0.0, p2r - self.pulsed_peak_to_rms_thresh)))
             return UnknownLabelDecision(
