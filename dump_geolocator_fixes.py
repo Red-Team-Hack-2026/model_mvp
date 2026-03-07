@@ -110,20 +110,45 @@ def emit_jsonl(out_f, obj: Dict[str, Any]) -> None:
         out_f.flush()
 
 
-def _to_analysis_row(fix: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def _confidence_from_fix(fix: Dict[str, Any]) -> Optional[float]:
+    c = fix.get("mean_confidence")
+    if c is not None:
+        return float(c)
+
+    # Fallback for cases where mean_confidence isn't populated.
+    ap = fix.get("assurance_pct")
+    if ap is not None:
+        try:
+            return float(ap) / 100.0
+        except Exception:
+            return None
+    return None
+
+
+def _to_analysis_rows(fix: Dict[str, Any]) -> List[Dict[str, Any]]:
     if not fix.get("geolocation_ok"):
-        return None
+        return []
 
     obs_ids = fix.get("observation_ids") or []
-    observation_id = obs_ids[0] if isinstance(obs_ids, list) and obs_ids else None
+    if not isinstance(obs_ids, list):
+        obs_ids = []
 
-    return {
-        "observation_id": observation_id,
-        "classification_label": fix.get("pred_label_name"),
-        "confidence": fix.get("mean_confidence"),
-        "estimated_latitude": fix.get("latitude"),
-        "estimated_longitude": fix.get("longitude"),
-    }
+    # A geolocation fix is computed for a *group* of observations.
+    # For analysis convenience, emit one row per observation_id.
+    if not obs_ids:
+        obs_ids = [fix.get("group_id")]
+
+    out: List[Dict[str, Any]] = []
+    for oid in obs_ids:
+        out.append({
+            "observation_id": None if oid is None else str(oid),
+            "classification_label": fix.get("pred_label_name"),
+            "confidence": _confidence_from_fix(fix),
+            "estimated_latitude": fix.get("latitude"),
+            "estimated_longitude": fix.get("longitude"),
+            "uncertainty_radius_m": fix.get("uncertainty_radius_m"),
+        })
+    return out
 
 
 def main() -> None:
@@ -181,8 +206,8 @@ def main() -> None:
             enriched = infer_engine.infer_one_observation(raw_obs)
             for g in associator.add(enriched):
                 fix = geolocator.geolocate_group(g)
-                row = _to_analysis_row(fix)
-                if row is None:
+                rows = _to_analysis_rows(fix)
+                if not rows:
                     if args.include_failed:
                         emit_jsonl(out_f, {
                             "timestamp": iso_z(datetime.now(timezone.utc)),
@@ -190,15 +215,16 @@ def main() -> None:
                             "fix": fix,
                         })
                     continue
-                emit_jsonl(out_f, row)
+                for row in rows:
+                    emit_jsonl(out_f, row)
 
     except KeyboardInterrupt:
         pass
     finally:
         for g in associator.flush_all():
             fix = geolocator.geolocate_group(g)
-            row = _to_analysis_row(fix)
-            if row is None:
+            rows = _to_analysis_rows(fix)
+            if not rows:
                 if args.include_failed:
                     emit_jsonl(out_f, {
                         "timestamp": iso_z(datetime.now(timezone.utc)),
@@ -206,7 +232,8 @@ def main() -> None:
                         "fix": fix,
                     })
                 continue
-            emit_jsonl(out_f, row)
+            for row in rows:
+                emit_jsonl(out_f, row)
 
         if out_f is not None:
             out_f.close()
