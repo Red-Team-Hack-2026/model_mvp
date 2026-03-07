@@ -21,13 +21,17 @@ except Exception:  # pragma: no cover
     certifi = None  # type: ignore
 
 from associator import ObservationAssociator
-from geolocate import RSSIGeolocator
+from geolocate import TDoAGeolocator
 from live_pipeline import LiveInferenceEngine
 from track_manager import TrackManager
 
 
 def iso_z(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    return (
+        dt.astimezone(timezone.utc)
+        .isoformat(timespec="milliseconds")
+        .replace("+00:00", "Z")
+    )
 
 
 def parse_iso8601(ts: str) -> datetime:
@@ -105,7 +109,9 @@ class HttpPollingJSONLSource(ObservationSource):
         else:
             if certifi is not None:
                 context = ssl.create_default_context(cafile=certifi.where())
-        with urllib.request.urlopen(req, timeout=self.timeout_s, context=context) as resp:  # type: ignore[attr-defined]
+        with urllib.request.urlopen(
+            req, timeout=self.timeout_s, context=context
+        ) as resp:  # type: ignore[attr-defined]
             payload = resp.read().decode("utf-8")
         return json.loads(payload)
 
@@ -121,7 +127,9 @@ class HttpPollingJSONLSource(ObservationSource):
                         yield item
             elif isinstance(data, dict):
                 # Common schema: {"observations": [...], "count": N, "has_more": bool}
-                if "observations" in data and isinstance(data.get("observations"), list):
+                if "observations" in data and isinstance(
+                    data.get("observations"), list
+                ):
                     for item in data["observations"]:
                         if isinstance(item, dict):
                             yield item
@@ -164,13 +172,15 @@ def emit_event(out_f, event: Dict[str, Any]) -> None:
         out_f.flush()
 
 
-def run_pipeline_batch(observations: List[Dict[str, Any]], cfg: PipelineConfig) -> List[Dict[str, Any]]:
+def run_pipeline_batch(
+    observations: List[Dict[str, Any]], cfg: PipelineConfig
+) -> List[Dict[str, Any]]:
     infer_engine = LiveInferenceEngine(cfg.ckpt, ood_thresh=cfg.ood_thresh)
     associator = ObservationAssociator(
         max_dt_ms=cfg.assoc_window_ms,
         min_score=cfg.assoc_score_thresh,
     )
-    geolocator = RSSIGeolocator(cfg.receivers_json, cfg.path_loss_json)
+    geolocator = TDoAGeolocator(cfg.receivers_json, cfg.path_loss_json)
     tm = TrackManager(
         match_distance_m=cfg.track_match_distance_m,
         max_time_gap_s=cfg.track_max_time_gap_s,
@@ -201,13 +211,19 @@ def run_pipeline_batch(observations: List[Dict[str, Any]], cfg: PipelineConfig) 
     return events
 
 
-def run_pipeline_live(source: ObservationSource, cfg: PipelineConfig, out_f, snapshot_interval_s: float, run_seconds: Optional[float]) -> None:
+def run_pipeline_live(
+    source: ObservationSource,
+    cfg: PipelineConfig,
+    out_f,
+    snapshot_interval_s: float,
+    run_seconds: Optional[float],
+) -> None:
     infer_engine = LiveInferenceEngine(cfg.ckpt, ood_thresh=cfg.ood_thresh)
     associator = ObservationAssociator(
         max_dt_ms=cfg.assoc_window_ms,
         min_score=cfg.assoc_score_thresh,
     )
-    geolocator = RSSIGeolocator(cfg.receivers_json, cfg.path_loss_json)
+    geolocator = TDoAGeolocator(cfg.receivers_json, cfg.path_loss_json)
     tm = TrackManager(
         match_distance_m=cfg.track_match_distance_m,
         max_time_gap_s=cfg.track_max_time_gap_s,
@@ -228,11 +244,14 @@ def run_pipeline_live(source: ObservationSource, cfg: PipelineConfig, out_f, sna
         now = time.time()
         if now - last_snapshot_t >= snapshot_interval_s:
             last_snapshot_t = now
-            emit_event(out_f, {
-                "event": "tracks_snapshot",
-                "timestamp": iso_z(datetime.now(timezone.utc)),
-                "tracks": tm.get_tracks(),
-            })
+            emit_event(
+                out_f,
+                {
+                    "event": "tracks_snapshot",
+                    "timestamp": iso_z(datetime.now(timezone.utc)),
+                    "tracks": tm.get_tracks(),
+                },
+            )
 
     try:
         for raw_obs in source:
@@ -273,8 +292,12 @@ def main() -> None:
 
     # Model / configs
     ap.add_argument("--ckpt", default=default_ckpt, help="Path to runs/.../best.pt")
-    ap.add_argument("--receivers", default=default_receivers, help="Path to receivers.json")
-    ap.add_argument("--path-loss", default=default_path_loss, help="Path to path_loss.json")
+    ap.add_argument(
+        "--receivers", default=default_receivers, help="Path to receivers.json"
+    )
+    ap.add_argument(
+        "--path-loss", default=default_path_loss, help="Path to path_loss.json"
+    )
 
     # Inference / association
     ap.add_argument("--ood-thresh", type=float, default=0.70)
@@ -294,20 +317,52 @@ def main() -> None:
 
     # Ingest mode
     ap.add_argument("--source", choices=["stdin", "http"], default="stdin")
-    ap.add_argument("--api-url", default=None, help="HTTP endpoint for live observations (when --source http)")
-    ap.add_argument("--api-header", action="append", default=[], help='HTTP header like "Authorization: Bearer ..."')
+    ap.add_argument(
+        "--api-url",
+        default=None,
+        help="HTTP endpoint for live observations (when --source http)",
+    )
+    ap.add_argument(
+        "--api-header",
+        action="append",
+        default=[],
+        help='HTTP header like "Authorization: Bearer ..."',
+    )
     ap.add_argument("--poll-interval-s", type=float, default=0.25)
-    ap.add_argument("--no-ssl-verify", action="store_true", help="Disable SSL certificate verification for HTTP source")
+    ap.add_argument(
+        "--no-ssl-verify",
+        action="store_true",
+        help="Disable SSL certificate verification for HTTP source",
+    )
 
     # Batch window
-    ap.add_argument("--collect-seconds", type=float, default=120.0, help="How long to collect observations before processing")
+    ap.add_argument(
+        "--collect-seconds",
+        type=float,
+        default=120.0,
+        help="How long to collect observations before processing",
+    )
     ap.add_argument("--max-observations", type=int, default=None)
 
-    ap.add_argument("--out", default=default_out, help="Output JSONL path for pipeline events (use '-' for stdout)")
+    ap.add_argument(
+        "--out",
+        default=default_out,
+        help="Output JSONL path for pipeline events (use '-' for stdout)",
+    )
 
     ap.add_argument("--mode", choices=["live", "batch"], default="live")
-    ap.add_argument("--snapshot-interval-s", type=float, default=2.0, help="Emit tracks_snapshot every N seconds in live mode (0 disables)")
-    ap.add_argument("--run-seconds", type=float, default=None, help="Optional: stop live mode after N seconds")
+    ap.add_argument(
+        "--snapshot-interval-s",
+        type=float,
+        default=2.0,
+        help="Emit tracks_snapshot every N seconds in live mode (0 disables)",
+    )
+    ap.add_argument(
+        "--run-seconds",
+        type=float,
+        default=None,
+        help="Optional: stop live mode after N seconds",
+    )
 
     args = ap.parse_args()
 
@@ -342,7 +397,11 @@ def main() -> None:
     out_f = open_output(args.out)
     try:
         if args.mode == "batch":
-            observations = collect_for_duration(source, duration_s=args.collect_seconds, max_observations=args.max_observations)
+            observations = collect_for_duration(
+                source,
+                duration_s=args.collect_seconds,
+                max_observations=args.max_observations,
+            )
             events = run_pipeline_batch(observations, cfg)
             for e in events:
                 emit_event(out_f, e)
