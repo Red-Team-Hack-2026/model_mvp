@@ -1,4 +1,3 @@
-# live_pipeline.py
 from __future__ import annotations
 
 import json
@@ -10,6 +9,7 @@ import torch
 
 from rfml.model import IQCNN
 from associator import ObservationAssociator
+from unknown_labeler import UnknownSignalLabeler
 
 
 def preprocess_iq(x256: np.ndarray, normalize: bool = True) -> np.ndarray:
@@ -32,6 +32,7 @@ class LiveInferenceEngine:
         self.ckpt_path = Path(ckpt_path)
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.ood_thresh = ood_thresh
+        self.unknown_labeler = UnknownSignalLabeler()
 
         ckpt = torch.load(self.ckpt_path, map_location="cpu")
         self.model = IQCNN(num_classes=ckpt["num_classes"], emb_dim=ckpt["emb_dim"])
@@ -44,13 +45,21 @@ class LiveInferenceEngine:
             self.centroids = np.load(centroids_path, allow_pickle=True).item()
 
         meta_path = self.ckpt_path.with_name("meta.json")
-        self.id_to_name = {}
+        self.id_to_signal_type = {}
+        self.id_to_modulation = {}
         if meta_path.exists():
             meta = json.loads(meta_path.read_text())
-            self.id_to_name = {
-                int(d["label_id"]): f'{d["modulation"]} | {d["signal_name"]}'
-                for d in meta["labels"]
+            signal_type_overrides = {
+                "SATCOM": "Satcom",
             }
+            for d in meta["labels"]:
+                lid = int(d["label_id"])
+                modulation = str(d["modulation"])
+                signal_type = str(d["signal_name"])
+                signal_type = signal_type_overrides.get(signal_type, signal_type)
+
+                self.id_to_signal_type[lid] = signal_type
+                self.id_to_modulation[lid] = modulation
 
     @torch.no_grad()
     def infer_one_observation(self, obs: Dict[str, Any]) -> Dict[str, Any]:
@@ -72,6 +81,22 @@ class LiveInferenceEngine:
             if nearest[1] < self.ood_thresh:
                 is_unknown = True
 
+        rule_decision = None
+        if is_unknown:
+            try:
+                rule_decision = self.unknown_labeler.label_iq_snapshot(obs["iq_snapshot"])
+            except Exception:
+                rule_decision = None
+            if rule_decision is not None:
+                pred = int(rule_decision.pred_label_id)
+                conf = float(rule_decision.confidence)
+
+        pred_signal_type = self.id_to_signal_type.get(pred, str(pred))
+        pred_modulation = self.id_to_modulation.get(pred)
+        if rule_decision is not None:
+            pred_signal_type = rule_decision.pred_label_name
+            pred_modulation = rule_decision.pred_modulation
+
         return {
             "observation_id": str(obs["observation_id"]),
             "timestamp": str(obs["timestamp"]),
@@ -80,7 +105,8 @@ class LiveInferenceEngine:
             "snr_estimate_db": float(obs["snr_estimate_db"]),
             "time_of_arrival_ns": obs.get("time_of_arrival_ns"),
             "pred_label_id": pred,
-            "pred_label_name": self.id_to_name.get(pred, str(pred)),
+            "pred_label_name": pred_signal_type,
+            "pred_modulation": pred_modulation,
             "confidence": conf,
             "ood_unknown": is_unknown,
             "ood_thresh": float(self.ood_thresh),

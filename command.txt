@@ -1,0 +1,17 @@
+curl -X POST https://findmyforce.online/submissions/batch \
+  -H "X-API-Key: N6B1NfkxFT7AKBD2DQ9Jd4uUr3RJKG3jSKR5eR37hjk" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "submissions": [
+    {
+        "observation_id": "02032625-9582-4673-8dda-e2f2d81a00be", 
+        "classification_label": "Radar-Altimeter", 
+        "confidence": 0.854627917210261, 
+        "estimated_latitude": 49.26093533884137, 
+        "estimated_longitude": -123.25332709223338
+        },
+        {"observation_id": "5824d97e-fe28-4ff6-921d-a0858c52a421", "classification_label": "short-range", "confidence": 0.4475109577178955, "estimated_latitude": 49.26288527424162, "estimated_longitude": -123.2463996190491},
+        {"observation_id": "b0ac90b0-88c7-43a2-91dd-6e2c75af9348", "classification_label": "Radar-Altimeter", "confidence": 0.998503714799881, "estimated_latitude": 49.26027109287184, "estimated_longitude": -123.24667055149692},
+        {"observation_id": "66b0d256-22a8-41ad-84ba-e215c097242c", "classification_label": "Radar-Altimeter", "confidence": 0.6394334369235568, "estimated_latitude": 49.260986515433785, "estimated_longitude": -123.25812262759283}
+    ]
+}'

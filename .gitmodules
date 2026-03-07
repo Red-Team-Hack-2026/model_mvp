@@ -1,0 +1,3 @@
+[submodule "backend-micro-services"]
+	path = backend-micro-services
+	url = git@github.com:Red-Team-Hack-2026/backend-services.git
