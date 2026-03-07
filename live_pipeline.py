@@ -46,13 +46,21 @@ class LiveInferenceEngine:
             self.centroids = np.load(centroids_path, allow_pickle=True).item()
 
         meta_path = self.ckpt_path.with_name("meta.json")
-        self.id_to_name = {}
+        self.id_to_signal_type = {}
+        self.id_to_modulation = {}
         if meta_path.exists():
             meta = json.loads(meta_path.read_text())
-            self.id_to_name = {
-                int(d["label_id"]): f'{d["modulation"]} | {d["signal_name"]}'
-                for d in meta["labels"]
+            signal_type_overrides = {
+                "SATCOM": "Satcom",
             }
+            for d in meta["labels"]:
+                lid = int(d["label_id"])
+                modulation = str(d["modulation"])
+                signal_type = str(d["signal_name"])
+                signal_type = signal_type_overrides.get(signal_type, signal_type)
+
+                self.id_to_signal_type[lid] = signal_type
+                self.id_to_modulation[lid] = modulation
 
     @torch.no_grad()
     def infer_one_observation(self, obs: Dict[str, Any]) -> Dict[str, Any]:
@@ -84,6 +92,12 @@ class LiveInferenceEngine:
                 pred = int(rule_decision.pred_label_id)
                 conf = float(rule_decision.confidence)
 
+        pred_signal_type = self.id_to_signal_type.get(pred, str(pred))
+        pred_modulation = self.id_to_modulation.get(pred)
+        if rule_decision is not None:
+            pred_signal_type = rule_decision.pred_label_name
+            pred_modulation = rule_decision.pred_modulation
+
         return {
             "observation_id": str(obs["observation_id"]),
             "timestamp": str(obs["timestamp"]),
@@ -92,7 +106,8 @@ class LiveInferenceEngine:
             "snr_estimate_db": float(obs["snr_estimate_db"]),
             "time_of_arrival_ns": obs.get("time_of_arrival_ns"),
             "pred_label_id": pred,
-            "pred_label_name": (self.id_to_name.get(pred, str(pred)) if rule_decision is None else rule_decision.pred_label_name),
+            "pred_label_name": pred_signal_type,
+            "pred_modulation": pred_modulation,
             "confidence": conf,
             "ood_unknown": is_unknown,
             "ood_thresh": float(self.ood_thresh),

@@ -110,14 +110,6 @@ def emit_jsonl(out_f, obj: Dict[str, Any]) -> None:
         out_f.flush()
 
 
-def _label_short(label: Optional[str]) -> Optional[str]:
-    if label is None:
-        return None
-    if "|" in label:
-        return label.split("|", 1)[1].strip()
-    return label
-
-
 def _to_analysis_row(fix: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not fix.get("geolocation_ok"):
         return None
@@ -127,7 +119,7 @@ def _to_analysis_row(fix: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
     return {
         "observation_id": observation_id,
-        "classification_label": _label_short(fix.get("pred_label_name")),
+        "classification_label": fix.get("pred_label_name"),
         "confidence": fix.get("mean_confidence"),
         "estimated_latitude": fix.get("latitude"),
         "estimated_longitude": fix.get("longitude"),

@@ -10,6 +10,7 @@ import numpy as np
 class UnknownLabelDecision:
     pred_label_id: int
     pred_label_name: str
+    pred_modulation: str
     confidence: float
     debug: Dict[str, Any]
 
@@ -73,6 +74,7 @@ class UnknownSignalLabeler:
     LABEL_ID_AIRBORNE_DETECTION = 101
     LABEL_ID_AIRBORNE_RANGE = 102
     LABEL_ID_AIR_GROUND_MTI = 103
+    LABEL_ID_AM_RADIO = 104
 
     def __init__(
         self,
@@ -107,7 +109,8 @@ class UnknownSignalLabeler:
             conf = float(min(0.99, 0.5 + 0.6 * (sf - self.jammer_spectral_flatness_thresh)))
             return UnknownLabelDecision(
                 pred_label_id=self.LABEL_ID_EW_JAMMER,
-                pred_label_name="Jamming | EW-Jammer",
+                pred_label_name="EW-Jammer",
+                pred_modulation="Jamming",
                 confidence=conf,
                 debug=debug,
             )
@@ -117,18 +120,36 @@ class UnknownSignalLabeler:
             # Use periodicity proxy to pick subtype
             if acf_peak >= self.periodic_acf_peak_thresh:
                 label_id = self.LABEL_ID_AIR_GROUND_MTI
-                name = "Pulsed | Air-Ground-MTI"
+                name = "Air-Ground-MTI"
             else:
                 # Default split: range-finding tends to be sparse (single strong pulse)
                 # If extremely peaky, call it range; otherwise airborne detection.
                 if p2r >= (self.pulsed_peak_to_rms_thresh + 1.5):
                     label_id = self.LABEL_ID_AIRBORNE_RANGE
-                    name = "Pulsed | Airborne-range"
+                    name = "Airborne-range"
                 else:
                     label_id = self.LABEL_ID_AIRBORNE_DETECTION
-                    name = "Pulsed | Airborne-detection"
+                    name = "Airborne-detection"
 
             conf = float(min(0.95, 0.45 + 0.08 * max(0.0, kurt - self.pulsed_kurtosis_thresh) + 0.08 * max(0.0, p2r - self.pulsed_peak_to_rms_thresh)))
-            return UnknownLabelDecision(pred_label_id=label_id, pred_label_name=name, confidence=conf, debug=debug)
+            return UnknownLabelDecision(
+                pred_label_id=label_id,
+                pred_label_name=name,
+                pred_modulation="Pulsed",
+                confidence=conf,
+                debug=debug,
+            )
+
+        # 3) Civilian: AM radio (heuristic: narrowband, non-impulsive envelope)
+        # This is intentionally conservative: only triggers when it is clearly NOT broadband/jamming and NOT pulsed.
+        if occ_frac <= 0.08 and sf <= 0.20 and kurt < self.pulsed_kurtosis_thresh and p2r < self.pulsed_peak_to_rms_thresh:
+            conf = 0.60
+            return UnknownLabelDecision(
+                pred_label_id=self.LABEL_ID_AM_RADIO,
+                pred_label_name="AM radio",
+                pred_modulation="AM-DSB",
+                confidence=conf,
+                debug=debug,
+            )
 
         return None
