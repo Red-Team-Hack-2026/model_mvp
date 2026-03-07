@@ -75,6 +75,22 @@ class AssocGroup:
         vals = [bool(o.get("ood_unknown", False)) for o in self.observations]
         return sum(vals) >= max(1, len(vals) // 2)
 
+    def dominant_label_name(self) -> Optional[str]:
+        label_id = self.dominant_label_id()
+        if label_id is None:
+            return None
+        for o in self.observations:
+            if o.get("pred_label_id") == label_id:
+                return o.get("pred_label_name")
+        return None
+
+    def is_civilian(self) -> bool:
+        name = self.dominant_label_name()
+        if not name:
+            return False
+        nl = str(name).lower()
+        return ("am radio" in nl) or ("am-dsb" in nl) or ("am_dsb" in nl)
+
     def mean_confidence(self) -> Optional[float]:
         vals = [o.get("confidence") for o in self.observations if o.get("confidence") is not None]
         if not vals:
@@ -92,7 +108,9 @@ class AssocGroup:
         return float(sum(float(v) for v in vals) / len(vals))
 
     def affiliation(self) -> str:
-        return "unknown" if self.dominant_unknown() else "friendly"
+        if self.is_civilian():
+            return "civilian"
+        return "hostile" if self.dominant_unknown() else "friendly"
 
     def assurance_pct(self) -> Optional[float]:
         aff = self.affiliation()

@@ -1,25 +1,53 @@
 {
   "receivers": [
     {
-      "receiver_id": "rx1",
-      "latitude": 49.2827,
-      "longitude": -123.1207,
-      "sensitivity_dbm": -110,
-      "timing_accuracy_ns": 100
+      "receiver_id": "RX-01",
+      "latitude": 49.262,
+      "longitude": -123.25,
+      "sensitivity_dbm": -95.0,
+      "timing_accuracy_ns": 50.0
     },
     {
-      "receiver_id": "rx2",
-      "latitude": 49.2850,
-      "longitude": -123.1000,
-      "sensitivity_dbm": -110,
-      "timing_accuracy_ns": 100
+      "receiver_id": "RX-02",
+      "latitude": 49.265,
+      "longitude": -123.253,
+      "sensitivity_dbm": -95.0,
+      "timing_accuracy_ns": 50.0
     },
     {
-      "receiver_id": "rx3",
-      "latitude": 49.2700,
-      "longitude": -123.1100,
-      "sensitivity_dbm": -110,
-      "timing_accuracy_ns": 100
+      "receiver_id": "RX-03",
+      "latitude": 49.258,
+      "longitude": -123.253,
+      "sensitivity_dbm": -95.0,
+      "timing_accuracy_ns": 50.0
+    },
+    {
+      "receiver_id": "RX-04",
+      "latitude": 49.264,
+      "longitude": -123.24,
+      "sensitivity_dbm": -90.0,
+      "timing_accuracy_ns": 30.0
+    },
+    {
+      "receiver_id": "RX-05",
+      "latitude": 49.256,
+      "longitude": -123.242,
+      "sensitivity_dbm": -95.0,
+      "timing_accuracy_ns": 50.0
+    },
+    {
+      "receiver_id": "RX-06",
+      "latitude": 49.2695,
+      "longitude": -123.257,
+      "sensitivity_dbm": -90.0,
+      "timing_accuracy_ns": 30.0
+    },
+    {
+      "receiver_id": "RX-07",
+      "latitude": 49.2605,
+      "longitude": -123.246,
+      "sensitivity_dbm": -95.0,
+      "timing_accuracy_ns": 50.0
     }
   ]
 }
