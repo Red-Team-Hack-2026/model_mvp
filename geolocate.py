@@ -225,12 +225,22 @@ class RSSIGeolocator:
                 "reason": "need_at_least_3_observations",
             }
 
-        usable = []
+        best_by_receiver: Dict[str, Dict[str, Any]] = {}
         for o in obs:
             rid = str(o["receiver_id"])
             if rid not in self.receivers:
                 continue
-            usable.append(o)
+            prev = best_by_receiver.get(rid)
+            if prev is None:
+                best_by_receiver[rid] = o
+                continue
+            try:
+                if float(o.get("rssi_dbm", -1e9)) > float(prev.get("rssi_dbm", -1e9)):
+                    best_by_receiver[rid] = o
+            except Exception:
+                continue
+
+        usable = list(best_by_receiver.values())
 
         if len(usable) < 3:
             return {
@@ -263,6 +273,7 @@ class RSSIGeolocator:
                 d_ref_m=self.path_loss["d_ref_m"],
                 path_loss_exponent=self.path_loss["path_loss_exponent"],
             )
+            d_est = float(max(10.0, min(5000.0, d_est)))
 
             receiver_xy.append([x, y])
             distances_m.append(d_est)
@@ -277,6 +288,17 @@ class RSSIGeolocator:
 
         receiver_xy = np.asarray(receiver_xy, dtype=np.float64)
         distances_m = np.asarray(distances_m, dtype=np.float64)
+
+        if len(distances_m) >= 4:
+            med = float(np.median(distances_m))
+            if med > 0:
+                lo = med / 5.0
+                hi = med * 5.0
+                keep = (distances_m >= lo) & (distances_m <= hi)
+                if int(np.sum(keep)) >= 3:
+                    receiver_xy = receiver_xy[keep]
+                    distances_m = distances_m[keep]
+                    receiver_debug = [d for d, k in zip(receiver_debug, keep.tolist()) if k]
 
         try:
             p_hat, uncertainty_radius_m, solver_debug = solve_position_weighted_least_squares(
