@@ -106,7 +106,13 @@ class HttpPollingJSONLSource(ObservationSource):
                     if isinstance(item, dict):
                         yield item
             elif isinstance(data, dict):
-                yield data
+                # Common schema: {"observations": [...], "count": N, "has_more": bool}
+                if "observations" in data and isinstance(data.get("observations"), list):
+                    for item in data["observations"]:
+                        if isinstance(item, dict):
+                            yield item
+                else:
+                    yield data
             time.sleep(self.poll_interval_s)
 
 

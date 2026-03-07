@@ -124,10 +124,18 @@ class TrackManager:
         self.tracks: List[Track] = []
         self.next_track_id = 1
 
-    def _compute_affiliation(self, ood_unknown: bool, num_updates: int) -> str:
+    def _is_civilian_label(self, pred_label_name: Optional[str]) -> bool:
+        if not pred_label_name:
+            return False
+        nl = str(pred_label_name).lower()
+        return ("am radio" in nl) or ("am-dsb" in nl) or ("am_dsb" in nl)
+
+    def _compute_affiliation(self, ood_unknown: bool, num_updates: int, pred_label_name: Optional[str] = None) -> str:
+        if self._is_civilian_label(pred_label_name):
+            return "civilian"
         if not bool(ood_unknown):
             return "friendly"
-        return "enemy" if int(num_updates) >= self.enemy_after_updates else "unknown"
+        return "hostile"
 
     def _label_compatible(self, fix: Dict[str, Any], track: Track) -> bool:
         # Unknown can match unknown. Known should usually match same label.
@@ -189,7 +197,11 @@ class TrackManager:
     def _create_track(self, fix: Dict[str, Any]) -> Track:
         ts = fix.get("end_timestamp") or fix.get("start_timestamp")
         ood_unknown = bool(fix.get("ood_unknown", False))
-        affiliation = self._compute_affiliation(ood_unknown=ood_unknown, num_updates=1)
+        affiliation = self._compute_affiliation(
+            ood_unknown=ood_unknown,
+            num_updates=1,
+            pred_label_name=fix.get("pred_label_name"),
+        )
         t = Track(
             track_id=self.next_track_id,
             created_at=ts,
@@ -218,7 +230,7 @@ class TrackManager:
         # Note: affiliation is computed at track-level for persistence
         affiliation = fix.get("affiliation")
         if affiliation is None:
-            affiliation = "unknown" if ood_unknown else "friendly"
+            affiliation = "hostile" if ood_unknown else "friendly"
         return {
             "group_id": fix.get("group_id"),
             "timestamp": fix.get("end_timestamp") or fix.get("start_timestamp"),
@@ -262,6 +274,7 @@ class TrackManager:
         track.affiliation = self._compute_affiliation(
             ood_unknown=track.ood_unknown,
             num_updates=track.num_updates,
+            pred_label_name=track.pred_label_name,
         )
         track.assurance_pct = fix.get("assurance_pct")
         track.mean_confidence = fix.get("mean_confidence")
