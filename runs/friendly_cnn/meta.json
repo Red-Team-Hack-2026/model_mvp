@@ -31,6 +31,6 @@
       "signal_name": "short-range"
     }
   ],
-  "num_samples": 41361,
-  "skipped_samples_not_in_label_map": 0
+  "num_samples": 341722,
+  "skipped_samples_not_in_label_map": 560000
 }
