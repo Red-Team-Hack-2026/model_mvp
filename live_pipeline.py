@@ -10,6 +10,7 @@ import torch
 
 from rfml.model import IQCNN
 from associator import ObservationAssociator
+from unknown_labeler import UnknownSignalLabeler
 
 
 def preprocess_iq(x256: np.ndarray, normalize: bool = True) -> np.ndarray:
@@ -32,6 +33,7 @@ class LiveInferenceEngine:
         self.ckpt_path = Path(ckpt_path)
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.ood_thresh = ood_thresh
+        self.unknown_labeler = UnknownSignalLabeler()
 
         ckpt = torch.load(self.ckpt_path, map_location="cpu")
         self.model = IQCNN(num_classes=ckpt["num_classes"], emb_dim=ckpt["emb_dim"])
@@ -72,6 +74,16 @@ class LiveInferenceEngine:
             if nearest[1] < self.ood_thresh:
                 is_unknown = True
 
+        rule_decision = None
+        if is_unknown:
+            try:
+                rule_decision = self.unknown_labeler.label_iq_snapshot(obs["iq_snapshot"])
+            except Exception:
+                rule_decision = None
+            if rule_decision is not None:
+                pred = int(rule_decision.pred_label_id)
+                conf = float(rule_decision.confidence)
+
         return {
             "observation_id": str(obs["observation_id"]),
             "timestamp": str(obs["timestamp"]),
@@ -80,7 +92,7 @@ class LiveInferenceEngine:
             "snr_estimate_db": float(obs["snr_estimate_db"]),
             "time_of_arrival_ns": obs.get("time_of_arrival_ns"),
             "pred_label_id": pred,
-            "pred_label_name": self.id_to_name.get(pred, str(pred)),
+            "pred_label_name": (self.id_to_name.get(pred, str(pred)) if rule_decision is None else rule_decision.pred_label_name),
             "confidence": conf,
             "ood_unknown": is_unknown,
             "ood_thresh": float(self.ood_thresh),
