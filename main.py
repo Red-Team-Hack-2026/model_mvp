@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import ssl
 import sys
 import time
 from dataclasses import dataclass
@@ -13,6 +14,11 @@ try:
     import urllib.request
 except Exception:  # pragma: no cover
     urllib = None  # type: ignore
+
+try:
+    import certifi  # type: ignore
+except Exception:  # pragma: no cover
+    certifi = None  # type: ignore
 
 from associator import ObservationAssociator
 from geolocate import RSSIGeolocator
@@ -80,18 +86,26 @@ class HttpPollingJSONLSource(ObservationSource):
         poll_interval_s: float = 0.25,
         headers: Optional[List[str]] = None,
         timeout_s: float = 10.0,
+        verify_ssl: bool = True,
     ):
         self.url = url
         self.poll_interval_s = poll_interval_s
         self.headers = headers or []
         self.timeout_s = timeout_s
+        self.verify_ssl = bool(verify_ssl)
 
     def _fetch(self) -> Any:
         req = urllib.request.Request(self.url)  # type: ignore[attr-defined]
         for h in self.headers:
             k, v = h.split(":", 1)
             req.add_header(k.strip(), v.strip())
-        with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:  # type: ignore[attr-defined]
+        context = None
+        if not self.verify_ssl:
+            context = ssl._create_unverified_context()
+        else:
+            if certifi is not None:
+                context = ssl.create_default_context(cafile=certifi.where())
+        with urllib.request.urlopen(req, timeout=self.timeout_s, context=context) as resp:  # type: ignore[attr-defined]
             payload = resp.read().decode("utf-8")
         return json.loads(payload)
 
@@ -137,7 +151,7 @@ def open_output(out: str):
         return None
     out_path = Path(out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    return out_path.open("a", encoding="utf-8")
+    return out_path.open("a", encoding="utf-8", buffering=1)
 
 
 def emit_event(out_f, event: Dict[str, Any]) -> None:
@@ -283,6 +297,7 @@ def main() -> None:
     ap.add_argument("--api-url", default=None, help="HTTP endpoint for live observations (when --source http)")
     ap.add_argument("--api-header", action="append", default=[], help='HTTP header like "Authorization: Bearer ..."')
     ap.add_argument("--poll-interval-s", type=float, default=0.25)
+    ap.add_argument("--no-ssl-verify", action="store_true", help="Disable SSL certificate verification for HTTP source")
 
     # Batch window
     ap.add_argument("--collect-seconds", type=float, default=120.0, help="How long to collect observations before processing")
@@ -321,6 +336,7 @@ def main() -> None:
             url=args.api_url,
             poll_interval_s=args.poll_interval_s,
             headers=args.api_header,
+            verify_ssl=not bool(args.no_ssl_verify),
         )
 
     out_f = open_output(args.out)
