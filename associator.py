@@ -1,10 +1,11 @@
 # associator.py
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-import math
+
 import numpy as np
 
 
@@ -55,12 +56,14 @@ class AssocGroup:
         return out
 
     def centroid_embedding(self) -> Optional[List[float]]:
-        embs = [o["embedding"] for o in self.observations if o.get("embedding") is not None]
+        embs = [
+            o["embedding"] for o in self.observations if o.get("embedding") is not None
+        ]
         if not embs:
             return None
         arr = np.asarray(embs, dtype=np.float32)
         mu = arr.mean(axis=0)
-        mu /= (np.linalg.norm(mu) + 1e-12)
+        mu /= np.linalg.norm(mu) + 1e-12
         return mu.tolist()
 
     def dominant_label_id(self) -> Optional[int]:
@@ -92,7 +95,11 @@ class AssocGroup:
         return ("am radio" in nl) or ("am-dsb" in nl) or ("am_dsb" in nl)
 
     def mean_confidence(self) -> Optional[float]:
-        vals = [o.get("confidence") for o in self.observations if o.get("confidence") is not None]
+        vals = [
+            o.get("confidence")
+            for o in self.observations
+            if o.get("confidence") is not None
+        ]
         if not vals:
             return None
         return float(sum(float(v) for v in vals) / len(vals))
@@ -152,9 +159,9 @@ class AssocGroup:
 class ObservationAssociator:
     def __init__(
         self,
-        max_dt_ms: float = 100.0,
+        max_dt_ms: float = 1.0,  # change from 100.0
         min_score: float = 0.55,
-        flush_age_ms: float = 120.0,
+        flush_age_ms: float = 2.0,  # change from 120.0
         same_receiver_penalty: float = 0.30,
     ):
         self.max_dt_ms = max_dt_ms
@@ -205,24 +212,42 @@ class ObservationAssociator:
         toa = obs.get("time_of_arrival_ns")
         if toa is None:
             return 0.5
-        vals = [o.get("time_of_arrival_ns") for o in group.observations if o.get("time_of_arrival_ns") is not None]
+        vals = [
+            o.get("time_of_arrival_ns")
+            for o in group.observations
+            if o.get("time_of_arrival_ns") is not None
+        ]
         if not vals:
             return 0.5
         mu = sum(vals) / len(vals)
         diff = abs(float(toa) - mu)
         # broad placeholder; tune later when you know network geometry
-        return max(0.0, 1.0 - diff / 1_000_000.0)
+        # return max(0.0, 1.0 - diff / 1_000_000.0)
+        return max(0.0, 1.0 - diff / 10_000)  # try 10_000 instead of 1m
 
     def _receiver_penalty(self, obs: Dict[str, Any], group: AssocGroup) -> float:
-        return self.same_receiver_penalty if obs["receiver_id"] in group.receivers() else 0.0
+        # return (
+        #     self.same_receiver_penalty
+        #     if obs["receiver_id"] in group.receivers()
+        #     else 0.0
+        # )
+
+        # try rejecting instead of penalizing
+        if obs["receiver_id"] in group.receivers():
+            return 1.0
+        return 0.0
 
     def _compatibility(self, obs: Dict[str, Any], group: AssocGroup) -> float:
+        # try rejecting
+        if obs["receiver_id"] in group.receivers():
+            return -1.0
+
         s = (
-            0.35 * self._time_score(obs, group) +
-            0.25 * self._label_score(obs, group) +
-            0.25 * self._embedding_score(obs, group) +
-            0.10 * self._rssi_score(obs, group) +
-            0.05 * self._toa_score(obs, group)
+            0.35 * self._time_score(obs, group)
+            + 0.25 * self._label_score(obs, group)
+            + 0.25 * self._embedding_score(obs, group)
+            + 0.10 * self._rssi_score(obs, group)
+            + 0.05 * self._toa_score(obs, group)
         )
         s -= self._receiver_penalty(obs, group)
         return s
